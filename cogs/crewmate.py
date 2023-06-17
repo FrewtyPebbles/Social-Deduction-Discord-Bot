@@ -12,7 +12,8 @@ from discord.ext import tasks
 from bson import ObjectId
 
 #TODO:
-# - add a prompt queue to the crew document so there are no repeat questions.
+# - add a prompt queue to the crew collection so there are no repeat questions.
+# - make it so people can only vote once (add a can_vote parameter to crew_member collection)
 
 class Crewmate(commands.Cog):
     def __init__(self, bot:DBBot):
