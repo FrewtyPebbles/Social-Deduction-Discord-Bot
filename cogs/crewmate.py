@@ -60,6 +60,7 @@ class Crewmate(commands.Cog):
                 "state":"none",
                 "state_switch_time": time.time(),
                 "can_answer":False,
+                "prompt":"",
                 "crew":[ObjectId(member["_id"])]
             })
         else:
@@ -161,11 +162,12 @@ class Crewmate(commands.Cog):
                     }})
                     # show all the responses to the prompt and their names
                     embed = discord.Embed(
-                        title="Responses",
-                        description="You have 7 minutes to vote out whoever you believe might be an imposter.  Use /vote to vote against them!",
+                        title="The responses are in! Here was the prompt:",
+                        description=crew_data["prompt"],
                         color=16777215
                     )
-                    for crew_member in await self.db.crew.find({"guild_id":guild.id}).to_list(None):
+                    embed.set_thumbnail(url="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBF55Nobpf8Es6Nu4h8K0ajveKPKZj83iKCPlsZK4NAw&usqp=CAU&ec=48665701")
+                    for crew_member in await self.db.crew_member.find({"guild_id":guild.id}).to_list(None):
                         user = await self.bot.fetch_user(crew_member["user_id"])
                         embed.add_field(name=user.name, value=crew_member["answer"])
                     await channel.send(embed=embed)
@@ -221,13 +223,16 @@ class Crewmate(commands.Cog):
         crew = await self.db.crew.update_one({"guild_id":interaction.guild_id}, {"$set":{
             "state":"match",
             "state_switch_time":time.time() + 300, # in 5 min switch states
-            "can_answer":True
+            "can_answer":True,
+            "prompt":"This is a placeholder prompt."
         }})
         embed = discord.Embed(
                         title="There are one or more imposters among your crew!",
-                        description="The same prompt has been sent to all of you in DM except for the imposters who were sent a similar but different prompt.  You have 5 minutes to use `/respond` in this text channel to respond to the prompt.  You must find out who the imposters are based on how they responded to the prompt and vote them out once voting starts in order to win.  Check your DMs now and start `/respond`ing!",
+                        description="A prompt has been sent to all of you in DM.\nYou have 5 minutes to use `/respond` in this text channel to respond to the prompt.",
                         color=16777215
                     )
+        embed.set_thumbnail(url="https://media.tenor.com/gQV5VzHLWQIAAAAM/among-us-sus.gif")
+        
         # change crew state to match
         await interaction.response.send_message(embed=embed)
 
