@@ -3,7 +3,7 @@ import math
 import os
 import random
 import time
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from discord.ext import commands
 import discord
 from bot_class import DBBot
@@ -12,8 +12,7 @@ from discord.ext import tasks
 from bson import ObjectId
 
 #TODO:
-# - add a prompt queue to the crew collection so there are no repeat questions.
-# - make it so people can only vote once (add a can_vote parameter to crew_member collection)
+# fix timer so it works better
 
 class Crewmate(commands.Cog):
     def __init__(self, bot:DBBot):
@@ -26,11 +25,10 @@ class Crewmate(commands.Cog):
         self.game_loop.start()
 
     async def get_crew_members(self, guild_id:int):
-        crew = await self.db.crew.find_one({"guild_id":guild_id})
-        if crew:
-            return [await self.db.crew_member.find_one({"_id":ObjectId(member_id)}) for member_id in crew["crew"]]
-        else:
-            return []
+        return await self.db.crew_member.find({"guild_id":guild_id, "alive":True}).to_list(None)
+    
+    def _randseed(self):
+        return random.Random(int(time.time()*1000))
 
     @commands.command(name='susbotsync', description='Owner only')
     @commands.has_permissions(administrator=True)
@@ -47,6 +45,7 @@ class Crewmate(commands.Cog):
             "alive": True,
             "answer":"",
             "votes":0,
+            "can_vote":False
         }}, upsert= True)
         member = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
         crew = await self.db.crew.find_one({"guild_id":interaction.guild_id, "channel_id":interaction.channel_id})
@@ -57,7 +56,7 @@ class Crewmate(commands.Cog):
                 "state":"none",
                 "state_switch_time": time.time(),
                 "can_answer":False,
-                "prompt":"",
+                "prompts":[],
                 "crew":[ObjectId(member["_id"])]
             })
         else:
@@ -101,28 +100,29 @@ class Crewmate(commands.Cog):
                 await interaction.response.send_message(f"It is not time to write a response yet!")
             else:
                 await interaction.response.send_message(f"Dead crew members cannot write a response!")
-
+    
+    
     async def crew_members_autocomplete(self,
         interaction: discord.Interaction,
-        current: str,
-    ) -> list[app_commands.Choice[str]]:
-
-        ret_list = [
-            app_commands.Choice(name=(usr_name := (await self.bot.fetch_user(choice["user_id"]))).name, value=usr_name.id)
-            for choice in await self.get_crew_members(interaction.guild_id)
-            if
-            choice["user_id"] != interaction.user.id
-        ]
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+        
+        ret_list = []
+        for choice in await self.get_crew_members(interaction.guild_id):
+            usr = await self.bot.fetch_user(choice["user_id"])
+            if current.lower() in usr.name.lower() and usr.name.lower() != interaction.user.name:
+                ret_list.append(app_commands.Choice(name=usr.name, value=str(usr.id)))
         print(ret_list)
         return ret_list
 
     @app_commands.command(name='vote', description='Joins or creates a new crew if the specified crew does not exist.')
     @app_commands.autocomplete(user_id=crew_members_autocomplete)
-    async def vote(self, interaction:discord.Interaction, user_id:int):
+    async def vote(self, interaction:discord.Interaction, user_id:str):
+        user_id = int(user_id)
         user = await self.bot.fetch_user(user_id)
         me = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
         crew = await self.db.crew.find_one({"guild_id":interaction.guild_id})
-        if crew["state"] == "voting" and me["alive"]:
+        if crew["state"] == "voting" and me["alive"] and me["can_vote"]:
             await self.db.crew_member.update_one({"user_id":user.id, "guild_id":interaction.guild_id},{"$set":{
                 "votes": {"$add": ["$votes", 1]}
             }})
@@ -135,7 +135,10 @@ class Crewmate(commands.Cog):
                 await interaction.response.send_message(f"You are dead and cannot vote!")
             elif crew["state"] != "voting":
                 await interaction.response.send_message(f"It is not time to vote yet!")
-
+            elif not me["can_vote"]:
+                await interaction.response.send_message(f"You have already voted.")
+    
+    
     # gameplay loop
     # def cog_unload(self):
     #     self.game_loop.cancel()
@@ -154,20 +157,21 @@ class Crewmate(commands.Cog):
                     #time is up
                     await self.db.crew.update_one({"guild_id":guild.id}, {"$set":{
                         "state":"voting",
-                        "state_switch_time":time.time() + 60 * 7, # voting ends in 7 minutes
+                        "state_switch_time":time.time() + 60 * 1.5, # voting ends in 7 minutes
                         "can_answer":False
                     }})
                     # show all the responses to the prompt and their names
                     embed = discord.Embed(
                         title="Its time to vote!  Here was the prompt:",
-                        description=crew_data["prompt"],
+                        description=crew_data["prompts"][-1]["crew"],
                         color=16777215
                     )
                     embed.set_thumbnail(url="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBF55Nobpf8Es6Nu4h8K0ajveKPKZj83iKCPlsZK4NAw&usqp=CAU&ec=48665701")
-                    for crew_member in await self.db.crew_member.find({"guild_id":guild.id}).to_list(None):
+                    for crew_member in await self.db.crew_member.find({"guild_id":guild.id, "alive":True}).to_list(None):
                         user = await self.bot.fetch_user(crew_member["user_id"])
                         embed.add_field(name=f"{user.name} replied:", value=crew_member["answer"])
                     await channel.send(embed=embed)
+                    await self.db.crew_member.update_many({"guild_id":guild.id, "alive":True}, {"$set":{"can_vote":True}})
                     continue
                 if math.floor((crew_data['state_switch_time'] - time.time())/60) != 0:
                     await channel.send(f"You have {math.floor((crew_data['state_switch_time'] - time.time())/60)} minutes and {round((crew_data['state_switch_time'] - time.time()) % 60)} seconds left to respond!")
@@ -180,6 +184,7 @@ class Crewmate(commands.Cog):
                 if time.time() >= crew_data["state_switch_time"]:
                     #time is up
                     # THROW SOMEONE OUT THE AIRLOCK
+                    await self.db.crew_member.update_many({"guild_id":guild.id, "alive":True}, {"$set":{"can_vote":False}})
                     highest_voted = [0, 0, False]
                     embed = discord.Embed(
                             title="",
@@ -287,17 +292,29 @@ class Crewmate(commands.Cog):
                 if time.time() >= crew_data["state_switch_time"]:
                     #time is up
                     #if some team has won then do this:
-                    crew_prompt, imposter_prompt = self._get_prompts()
-                    await self.db.crew.update_one({"guild_id":guild.id}, {"$set":{
-                        "state":"match",
-                        "state_switch_time":time.time() + 60 * 5, # 5 min till match ends
-                        "can_answer":True,
-                        "prompt":crew_prompt
-                    }})
-                    await self._send_prompts(guild, crew_prompt, imposter_prompt)
+                    
+                    prompts = []
+                    crew = await self.db.crew.find_one({"guild_id":guild.id})
+                    if len(crew[prompts]) <= 1:
+                        prompts = self._get_prompts()
+                        self._randseed().shuffle(prompts)
+                        await self.db.crew.update_one({"guild_id":guild.id}, {"$set":{
+                            "state":"match",
+                            "state_switch_time":time.time() + 60 * 2, # 2 min till match ends
+                            "can_answer":True,
+                            "prompts":prompts
+                        }})
+                    else:
+                        await self.db.crew.update_one({"guild_id":guild.id}, {"$set":{
+                            "state":"match",
+                            "state_switch_time":time.time() + 60 * 2, # 2 min till match ends
+                            "can_answer":True,
+                            "prompts":{"$slice":["$prompts", {"$subtract":[{"$size":"$prompts"},1]}]}
+                        }})
+                    await self._send_prompts(guild, crew["prompts"][-1]["crew"], self._randseed().choice(crew["prompts"][-1]["imposter"]))
                     new_round_embed = discord.Embed(
                         title="Its time for a new round!",
-                        description="A new prompt has been sent to all of you in DM.\nYou have 5 minutes to use `/respond` in this text channel to respond to the prompt.",
+                        description="A new prompt has been sent to all of you in DM.\nYou have 2 minutes to use `/respond` in this text channel to respond to the prompt.",
                         color=16777215
                     )
                     new_round_embed.set_thumbnail(url="https://media.tenor.com/gQV5VzHLWQIAAAAM/among-us-sus.gif")
@@ -313,9 +330,7 @@ class Crewmate(commands.Cog):
         json_f = open(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', "prompts.json")))
         prompts = json.load(json_f)
         json_f.close()
-        prompt = random.choice(prompts)
-        imposter_prompt:str = random.choice(prompt["imposter"])
-        return (prompt["crew"], imposter_prompt)
+        return prompts
 
     async def _send_prompts(self, guild:discord.Guild, crew_prompt:str, imposter_prompt:str):
         async for crew_member in self.db.crew_member.find({"guild_id":guild.id}):
@@ -340,22 +355,24 @@ class Crewmate(commands.Cog):
         member = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
         crew = await self.db.crew.find_one({"guild_id":interaction.guild_id})
         # set the imposters
-        for _ in range(random.randint(1,3 if len(crew["crew"]) > 4 else 1)):
-            await self.db.crew_member.update_one({"_id":ObjectId(random.choice(crew["crew"]))}, {"$set":{
+        for _ in range(self._randseed().randint(1,3 if len(crew["crew"]) > 4 else 1)):
+            print(crew["crew"])
+            await self.db.crew_member.update_one({"_id":ObjectId(self._randseed().choice(crew["crew"]))}, {"$set":{
                 "imposter":True
             }})
         # Send the prompt via DM to everyone in the crew
-        crew_prompt, imposter_prompt = self._get_prompts()
+        prompts = self._get_prompts()
+        self._randseed().shuffle(prompts)
         await self.db.crew.update_one({"guild_id":interaction.guild_id}, {"$set":{
             "state":"match",
-            "state_switch_time":time.time() + 60 * 5, # in 5 min switch states
+            "state_switch_time":time.time() + 60 * 2, # in 2 min switch states
             "can_answer":True,
-            "prompt":crew_prompt
+            "prompts":prompts
         }})
-        await self._send_prompts(interaction.guild, crew_prompt, imposter_prompt)
+        await self._send_prompts(interaction.guild, prompts[-1]["crew"], self._randseed().choice(prompts[-1]["imposter"]))
         embed = discord.Embed(
                         title="There are one or more imposters among your crew!",
-                        description="A prompt has been sent to all of you in DM.\nYou have 5 minutes to use `/respond` in this text channel to respond to the prompt.",
+                        description="A prompt has been sent to all of you in DM.\nYou have 2 minutes to use `/respond` in this text channel to respond to the prompt.",
                         color=16777215
                     )
         embed.set_thumbnail(url="https://media.tenor.com/gQV5VzHLWQIAAAAM/among-us-sus.gif")

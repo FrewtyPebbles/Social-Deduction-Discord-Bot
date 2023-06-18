@@ -2,5 +2,116 @@
 	{
 		"crew":"If you could have a conversation with any inanimate object, which one would you choose?",
 		"imposter":["If you were a vegetable, what vegetable would you be and why?", "If you were stranded on a deserted island and could only bring one item, what would you choose and why?"]
+	},
+	{
+		"crew":"What is something that brings you joy or makes you happy?",
+		"imposter":["Can you share a memorable travel experience you've had?", "What is a hobby or activity you find relaxing and enjoyable?", "Is there a book, movie, or song that has deeply influenced you? If so, how?"]
+	},
+	{
+		"crew":"What is something that universally brings people together?",
+		"imposter":["Can you name a basic human need that everyone requires for survival?", "What is a value that is commonly shared across different cultures?", "Is there a natural phenomenon that is universally admired or appreciated?"]
+	},
+	{
+		"crew": "What is a form of communication that transcends language barriers?",
+		"imposter": [
+			"Can you think of a basic human emotion that is universally recognizable?",
+			"What is an essential aspect of a supportive and healthy relationship?",
+			"Is there a type of music that has a universal appeal across cultures?"
+		]
+	},
+	{
+		"crew": "What is a silly thing that always makes you laugh uncontrollably?",
+		"imposter": [
+			"Can you name a funny word or phrase that never fails to make you chuckle?",
+			"What is a comical sound or noise that always brings a smile to your face?"
+		]
+	},
+	{
+		"crew": "What is a conspiracy theory that is so absurd it's hilarious?",
+		"imposter": [
+			"Can you name a funny urban legend or myth that never fails to make you laugh?",
+			"What is a bizarre superstition or old wives' tale that always brings a smile to your face?",
+			"What is a comical celebrity conspiracy theory or rumor that you find amusing?"
+		]
+	},
+	{
+		"crew": "If aliens were to visit Earth, what is the first comical scenario you can imagine happening?",
+		"imposter": [
+			"What would be the funniest alien disguise or costume that you can think of?",
+			"If aliens had a sense of humor, what do you think would be their favorite Earth joke?",
+			"What would be the most amusing inter-species game or competition between humans and aliens?"
+		]
+	},
+	{
+		"crew": "If you had 3 days to live how would you spend those days?",
+		"imposter": [
+			"What is your ideal vacation?",
+			"If you could do anything you wanted right now what would you do?",
+			"What is your favorite thing to do on a day off?"
+		]
+	},
+	{
+		"crew": "If you could go back in time and kill only one historical dictator who would you kill?",
+		"imposter": [
+			"Which historical dictator do you think would do the worst in a fist fight?",
+			"Who is the worst historical leader in your opinion?",
+			"Which historical figure do you think was the worst?"
+		]
+	},
+	{
+		"crew": "What is the best way to deal with a hangover?",
+		"imposter": [
+			"What is the best way to get rid of a headache?",
+			"If you feel sick, what is your go-to remedy?",
+			"What is your favorite alchohol?"
+		]
+	},
+	{
+		"crew": "If you were a bird where would you fly to?",
+		"imposter": [
+			"If you could go on a trip to anywhere, where would you go?",
+			"If you could get on an airplane and go anywhere, where would you go?",
+			"If you had to move to another country, where would you move?"
+		]
+	},
+	{
+		"crew": "If you had to become an insect, which insect would you become?",
+		"imposter": [
+			"If your house were infested with bugs, which bugs would you want it to be infested with?",
+			"What is the grossest bug in your oppinion?",
+			"If you had to eat one bug that is at least as large as a cricket, which bug would you eat?"
+		]
+	},
+	{
+		"crew": "Who is the greatest actor of all time?",
+		"imposter": [
+			"Which actor do you absolutely despise?",
+			"Who is the most controversal actor?",
+			"Which actor do you think you could beat in a fight?"
+		]
+	},
+	{
+		"crew": "What is the funniest thing you can think of right now?",
+		"imposter": [
+			"What is your favorite dad joke?",
+			"What is the dumbest joke you've ever heard?",
+			"What is the funniest quote you can think of?"
+		]
+	},
+	{
+		"crew": "What is the funniest way to get fired?",
+		"imposter": [
+			"What is the dumbest thing you've seen someone do at a job you've worked?",
+			"What is an impulsive thought you've had at work that would probably get you fired if you'd acted on?",
+			"What is the stupidest way you've been or seen someone get fired?"
+		]
+	},
+	{
+		"crew": "What is your biggest pet peev?",
+		"imposter": [
+			"If you had to annoy a complete stranger what would you do to do so?",
+			"What is something one of your friends does that annoys immensely?",
+			"What is the most annoying thing someone can do to you while you're driving?"
+		]
 	}
 ]
