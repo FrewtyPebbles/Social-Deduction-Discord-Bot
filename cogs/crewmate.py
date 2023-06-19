@@ -123,9 +123,7 @@ class Crewmate(commands.Cog):
         me = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
         crew = await self.db.crew.find_one({"guild_id":interaction.guild_id})
         if crew["state"] == "voting" and me["alive"] and me["can_vote"]:
-            await self.db.crew_member.update_one({"user_id":user.id, "guild_id":interaction.guild_id},{"$set":{
-                "votes": {"$add": ["$votes", 1]}
-            }})
+            await self.db.crew_member.update_one({"user_id":user.id, "guild_id":interaction.guild_id},{"$inc": {"votes": 1}})
             await self.db.crew_member.update_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id},{"$set":{
                 "can_vote": False
             }})
@@ -145,7 +143,7 @@ class Crewmate(commands.Cog):
 
     @tasks.loop(seconds=30, count=None, reconnect=True)
     async def game_loop(self):
-        for crew_data in await self.db.crew.find().to_list(None):
+        for crew_data in await self.db.crew.find({"state":{"$not":{"$eq":"none"}}}).to_list(None):
             guild = await self.bot.fetch_guild(crew_data["guild_id"])
             channel = await guild.fetch_channel(crew_data["channel_id"])
             #users = [await self.bot.fetch_user(crew_member_data["user_id"]) for crew_member_data in await self.db.crew_member.find({"guild_id":crew_data["guild_id"]}).to_list(None)]
@@ -208,10 +206,10 @@ class Crewmate(commands.Cog):
                             user = await self.bot.fetch_user(crew_member["user_id"])
                             embed.add_field(name=f"{user.name}'s votes:", value=crew_member["votes"])
                     else:
-                        dead_user = await self.bot.fetch_user(highest_voted[1])
+                        dead_user = await self.bot.fetch_user(highest_voted[0])
                         embed = discord.Embed(
                             title=f"***{dead_user.name}*** has been thrown out of the airlock!",
-                            description=f"He was a **{'IMPOSTER' if highest_voted[2] else 'CREW MEMBER'}**!",
+                            description=f"They were an **{'IMPOSTER' if highest_voted[2] else 'CREW MEMBER'}**!",
                             color=16777215
                         )
                         for crew_member in crew_members:
@@ -359,6 +357,12 @@ class Crewmate(commands.Cog):
             print(crew["crew"])
             await self.db.crew_member.update_one({"_id":ObjectId(self._randseed().choice(crew["crew"]))}, {"$set":{
                 "imposter":True
+            }})
+        await self.db.crew_member.update_many({"guild_id":interaction.guild_id},{"$set":{
+                "alive": True,
+                "answer":"",
+                "votes":0,
+                "can_vote":False
             }})
         # Send the prompt via DM to everyone in the crew
         prompts = self._get_prompts()
