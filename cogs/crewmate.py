@@ -19,6 +19,12 @@ class Crewmate(commands.Cog):
         self.bot = bot
         self.db = bot.db
 
+    async def _check_gamechannel(self, interaction:discord.Interaction):
+        is_game_channel = len(await self.db.gamechannel.find({"guild_id":interaction.guild_id, "channel_id":interaction.channel_id}).to_list(None)) > 0
+        if not is_game_channel:
+            await interaction.response.send_message("You cannot use that command here!")
+        return is_game_channel
+
     @commands.Cog.listener()
     async def on_ready(self):
         await self.db.crew.update_many({},{"$set":{"state":"none"}})
@@ -30,14 +36,10 @@ class Crewmate(commands.Cog):
     def _randseed(self):
         return random.Random(int(time.time()*1000))
 
-    @commands.command(name='susbotsync', description='Owner only')
-    @commands.has_permissions(administrator=True)
-    async def sync(self, ctx: commands.Context):
-        fmt = await ctx.bot.tree.sync()
-        await ctx.send(f'{len(fmt)} commands synced with server.')
-
     @app_commands.command(name='join', description='Joins the crew.')
     async def join(self, interaction:discord.Interaction):
+        if not await self._check_gamechannel(interaction):
+            return
         await self.db.crew_member.update_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id},{"$set":{
             "guild_id":interaction.guild_id,
             "user_id":interaction.user.id,
@@ -73,19 +75,23 @@ class Crewmate(commands.Cog):
                 return
         await interaction.response.send_message(f"*{interaction.user.name}* has joined the crew!")
 
-    @app_commands.command(name='leave', description='Leaves the crew.')
-    async def leave(self, interaction:discord.Interaction):
-        member = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
-        await self.db.crew.update_one({
-            "guild_id":interaction.guild_id,
-        },{"$pull":{
-            "crew":{"$in":[ObjectId(member["_id"])]}
-        }})
-        await self.db.crew_member.delete_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
-        await interaction.response.send_message(f"*{interaction.user.name}* has left the crew!")
+    # @app_commands.command(name='leave', description='Leaves the crew.')
+    # async def leave(self, interaction:discord.Interaction):
+    #     if not await self._check_gamechannel(interaction):
+    #         return
+    #     member = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
+    #     await self.db.crew.update_one({
+    #         "guild_id":interaction.guild_id,
+    #     },{"$pull":{
+    #         "crew":{"$in":[ObjectId(member["_id"])]}
+    #     }})
+    #     await self.db.crew_member.delete_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
+    #     await interaction.response.send_message(f"*{interaction.user.name}* has left the crew!")
         
     @app_commands.command(name='respond', description='Joins or creates a new crew if the specified crew does not exist.')
     async def write_response(self, interaction:discord.Interaction, response:str):
+        if not await self._check_gamechannel(interaction):
+            return
         member = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
         crew = await self.db.crew.find_one({"guild_id":interaction.guild_id})
         if crew is None:
@@ -118,6 +124,8 @@ class Crewmate(commands.Cog):
     @app_commands.command(name='vote', description='Joins or creates a new crew if the specified crew does not exist.')
     @app_commands.autocomplete(user_id=crew_members_autocomplete)
     async def vote(self, interaction:discord.Interaction, user_id:str):
+        if not await self._check_gamechannel(interaction):
+            return
         user_id = int(user_id)
         user = await self.bot.fetch_user(user_id)
         me = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
@@ -127,7 +135,7 @@ class Crewmate(commands.Cog):
             await self.db.crew_member.update_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id},{"$set":{
                 "can_vote": False
             }})
-            await interaction.response.send_message(f"{interaction.user.name} has voted for {user.name}")
+            await interaction.response.send_message(f"**{interaction.user.name}** has voted for ***{user.name}***")
         else:
             if not me["alive"]:
                 await interaction.response.send_message(f"You are dead and cannot vote!")
@@ -167,7 +175,7 @@ class Crewmate(commands.Cog):
                     embed.set_thumbnail(url="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBF55Nobpf8Es6Nu4h8K0ajveKPKZj83iKCPlsZK4NAw&usqp=CAU&ec=48665701")
                     for crew_member in await self.db.crew_member.find({"guild_id":guild.id, "alive":True}).to_list(None):
                         user = await self.bot.fetch_user(crew_member["user_id"])
-                        embed.add_field(name=f"{user.name} replied:", value=crew_member["answer"])
+                        embed.add_field(name=f"{user.name} replied:", value=crew_member["answer"], inline=False)
                     await channel.send(embed=embed)
                     await self.db.crew_member.update_many({"guild_id":guild.id, "alive":True}, {"$set":{"can_vote":True}})
                     continue
@@ -204,7 +212,7 @@ class Crewmate(commands.Cog):
                         )
                         for crew_member in crew_members:
                             user = await self.bot.fetch_user(crew_member["user_id"])
-                            embed.add_field(name=f"{user.name}'s votes:", value=crew_member["votes"])
+                            embed.add_field(name=f"{user.name}'s votes:", value=crew_member["votes"], inline=False)
                     else:
                         dead_user = await self.bot.fetch_user(highest_voted[0])
                         embed = discord.Embed(
@@ -214,7 +222,7 @@ class Crewmate(commands.Cog):
                         )
                         for crew_member in crew_members:
                             user = await self.bot.fetch_user(crew_member["user_id"])
-                            embed.add_field(name=f"{user.name}'s votes:", value=crew_member["votes"])
+                            embed.add_field(name=f"{user.name}'s votes:", value=crew_member["votes"], inline=False)
                         # someone was voted out
                         await self.db.crew_member.update_one({"user_id":highest_voted[0], "guild_id":guild.id}, {"$set":{
                             "alive": False
@@ -239,31 +247,33 @@ class Crewmate(commands.Cog):
                         if len(alive_crew) == 0:
                             win_embed = discord.Embed(
                                 title=f"***IMPOSTERS*** have won!",
-                                description=f"Use `/start` to play again!",
+                                description=f"Rejoin the crew with `/join` and use `/start` to play again!",
                                 color=16777215
                             )
                             
                             for crew_id in alive_imposters:
                                 user = await self.bot.fetch_user(crew_id)
-                                win_embed.add_field(name=f"{user.name} was an ***IMPOSTER***", value="")
+                                win_embed.add_field(name=f"{user.name} was an ***IMPOSTER***", value="", inline=False)
                             win_embed.set_thumbnail(url="https://media.discordapp.net/attachments/1113324969045282856/1119437111611904041/images_28.jpg")
                             await channel.send(embed=win_embed)
                         else:
                             win_embed = discord.Embed(
                                 title=f"***CREW MEMBERS*** have won!",
-                                description=f"Use `/start` to play again!",
+                                description=f"Rejoin the crew with `/join` and use `/start` to play again!",
                                 color=16777215
                             )
 
                             for crew_id in alive_crew:
                                 user = await self.bot.fetch_user(crew_id)
-                                win_embed.add_field(name=f"{user.name} survived", value="")
+                                win_embed.add_field(name=f"{user.name} survived", value="", inline=False)
                             win_embed.set_thumbnail(url="https://media.discordapp.net/attachments/1113324969045282856/1119437110492024863/images_24.jpg")
                             await channel.send(embed=win_embed)
                         await self.db.crew.update_one({"guild_id":guild.id}, {"$set":{
                             "state":"none",
+                            "crew":[],
                             "state_switch_time":time.time() # Intermission ends in 1 minute
                         }})
+                        await self.db.crew_member.delete_many({"guild_id":guild.id})
                     else:
                         #if noone has won
                         await self.db.crew.update_one({"guild_id":guild.id}, {"$set":{
@@ -350,8 +360,13 @@ class Crewmate(commands.Cog):
 
     @app_commands.command(name='start', description='Starts the game.  This command can only be used by the crew host.')
     async def start(self, interaction:discord.Interaction):
+        if not await self._check_gamechannel(interaction):
+            return
         member = await self.db.crew_member.find_one({"user_id":interaction.user.id, "guild_id":interaction.guild_id})
         crew = await self.db.crew.find_one({"guild_id":interaction.guild_id})
+        if len(crew["crew"]) < 3:
+            await interaction.response.send_message("You need at least 3 crew members to start the game!")
+            return
         # set the imposters
         for _ in range(self._randseed().randint(1,3 if len(crew["crew"]) > 4 else 1)):
             print(crew["crew"])

@@ -4,20 +4,8 @@
 		"imposter":["If you were a vegetable, what vegetable would you be and why?", "If you were stranded on a deserted island and could only bring one item, what would you choose and why?"]
 	},
 	{
-		"crew":"What is something that brings you joy or makes you happy?",
-		"imposter":["Can you share a memorable travel experience you've had?", "What is a hobby or activity you find relaxing and enjoyable?", "Is there a book, movie, or song that has deeply influenced you? If so, how?"]
-	},
-	{
 		"crew":"What is something that universally brings people together?",
 		"imposter":["Can you name a basic human need that everyone requires for survival?", "What is a value that is commonly shared across different cultures?", "Is there a natural phenomenon that is universally admired or appreciated?"]
-	},
-	{
-		"crew": "What is a form of communication that transcends language barriers?",
-		"imposter": [
-			"Can you think of a basic human emotion that is universally recognizable?",
-			"What is an essential aspect of a supportive and healthy relationship?",
-			"Is there a type of music that has a universal appeal across cultures?"
-		]
 	},
 	{
 		"crew": "What is a silly thing that always makes you laugh uncontrollably?",
@@ -111,7 +99,39 @@
 		"imposter": [
 			"If you had to annoy a complete stranger what would you do to do so?",
 			"What is something one of your friends does that annoys immensely?",
-			"What is the most annoying thing someone can do to you while you're driving?"
+			"What do you wish people would stop doing that you find annoying?"
+		]
+	},
+	{
+		"crew": "What is your all time favorite movie or show?",
+		"imposter": [
+			"What is your least favorite movie?",
+			"Which show do you wish had a second season?",
+			"What is your favorite anime?"
+		]
+	},
+	{
+		"crew": "If you had to eat only one food for the rest of your life, which food would you choose?",
+		"imposter": [
+			"What is a food that you've tried that was supposed to be good but turned out disgusting?",
+			"What food do you believe a majority of people on the earth like or would like?",
+			"What is your favorite healthy food?"
+		]
+	},
+	{
+		"crew": "You have cerial and no milk (this includes almond milk, soy milk, etc.) but you cannot eat your cerial dry.  What liquid are you substituting for milk?",
+		"imposter": [
+			"What is your favorite soda?",
+			"What is the best drink to pair with something sweet?",
+			"What is your favorite drinkable liquid?"
+		]
+	},
+	{
+		"crew": "What is your least favorite anime that you've watched?",
+		"imposter": [
+			"What anime should not have been made?",
+			"What is your least favorite manga?",
+			"What anime would your recomend to your worst enemy?"
 		]
 	}
 ]
