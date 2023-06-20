@@ -27,6 +27,7 @@ class Crewmate(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        print("Sus Bot started")
         await self.db.crew.update_many({},{"$set":{"state":"none"}})
         self.game_loop.start()
 
@@ -35,6 +36,25 @@ class Crewmate(commands.Cog):
     
     def _randseed(self):
         return random.Random(int(time.time()*1000))
+
+    @app_commands.command(name='help', description='How to play.')
+    async def help(self, interaction:discord.Interaction):
+        embed = discord.Embed(
+            title="Sus Bot Help Page",
+            description="""***How to play:***
+Sus Bot is a social deduction game where you and your "Crew" are sent prompts in DM to answer anonymously using `/respond` in the discord server channel that you are playing in.
+One or more people from the crew is selected as imposters and will be sent a different prompt from the rest of the crew each round that will evoke a similar but different response to the non-imposter prompt.
+It is the crew members' responsibility to figure out who the imposters are and vote them out.
+It is the imposters' responsibility to convince everyone else that they arent the imposter so they are the last ones alive.
+Good luck!""",
+            color=16777215
+        )
+        embed.add_field(name="`/help`", value="Brings up this menu.", inline=False)
+        embed.add_field(name="`/join`", value="Joins the crew.", inline=False)
+        embed.add_field(name="`/start`", value="Starts the game.", inline=False)
+        embed.add_field(name="`/respond [response]`", value="Responds anonymously to the prompt that was sent to you via DM.", inline=False)
+        embed.add_field(name="`/vote [user]`", value="Votes to send a user out of the airlock.", inline=False)
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name='join', description='Joins the crew.')
     async def join(self, interaction:discord.Interaction):
@@ -118,7 +138,6 @@ class Crewmate(commands.Cog):
             usr = await self.bot.fetch_user(choice["user_id"])
             if current.lower() in usr.name.lower() and usr.name.lower() != interaction.user.name:
                 ret_list.append(app_commands.Choice(name=usr.name, value=str(usr.id)))
-        print(ret_list)
         return ret_list
 
     @app_commands.command(name='vote', description='Joins or creates a new crew if the specified crew does not exist.')
@@ -369,7 +388,6 @@ class Crewmate(commands.Cog):
             return
         # set the imposters
         for _ in range(self._randseed().randint(1,3 if len(crew["crew"]) > 4 else 1)):
-            print(crew["crew"])
             await self.db.crew_member.update_one({"_id":ObjectId(self._randseed().choice(crew["crew"]))}, {"$set":{
                 "imposter":True
             }})
