@@ -2,3 +2,6 @@ __pycache__/
 .venv/
 .env
 discord.log
+Dockerfile
+docker-compose.yml
+.dockerignore

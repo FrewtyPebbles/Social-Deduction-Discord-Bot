@@ -11,9 +11,6 @@ from discord import app_commands
 from discord.ext import tasks
 from bson import ObjectId
 
-#TODO:
-# fix timer so it works better
-
 class Crewmate(commands.Cog):
     def __init__(self, bot:DBBot):
         self.bot = bot
